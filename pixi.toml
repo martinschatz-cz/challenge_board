@@ -1,0 +1,17 @@
+[project]
+name = "challenge-board"
+version = "0.1.0"
+description = "Leaderboard app for longest straight track in IGC files"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
+
+[dependencies]
+python = "3.11.*"
+streamlit = ">=1.30.0"
+pandas = ">=2.0.0"
+numpy = ">=1.24.0"
+folium = ">=0.15.0"
+streamlit-folium = ">=0.18.0"
+
+[tasks]
+start = "streamlit run app/main.py --server.port=8501 --server.address=0.0.0.0"
