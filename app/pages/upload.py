@@ -14,7 +14,8 @@ with st.form("upload_form"):
     igc_file = st.file_uploader("Upload IGC Track (Max 50 MB)", type=["igc"])
     
     max_dev = st.slider("Straight-line deviation tolerance (m)", 2, 15, 5)
-    max_circle_dev = st.slider("Circle radial error tolerance (m)", 2, 15, 5)
+    max_circle_dev = st.slider("Circle radial error tolerance (m)", 2, 50, 5)
+    min_circle_angle = st.slider("Minimum circle angle (degrees)", 90, 360, 180)
     
     submitted = st.form_submit_button("Submit Track", type="primary")
 
@@ -32,7 +33,8 @@ if submitted:
             result = analyze_igc_track(
                 temp_path,
                 max_dev_meters=max_dev,
-                max_circle_deviation_m=max_circle_dev
+                max_circle_deviation_m=max_circle_dev,
+                min_circle_angle_deg=min_circle_angle
             )
 
         if result:
@@ -69,6 +71,11 @@ if submitted:
                     f"with **{result['circle_closeness_pct']}%** closeness "
                     f"(radius {result['circle_radius_m']} m, "
                     f"angular span {result['circle_angular_span_deg']}°)."
+                )
+            else:
+                st.warning(
+                    "No qualifying circular segment was found, so this upload was not added "
+                    "to the circle leaderboard. Try a lower radial error tolerance or minimum angle."
                 )
             
             # Show Map preview

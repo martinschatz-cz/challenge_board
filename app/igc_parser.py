@@ -1,4 +1,5 @@
 import numpy as np
+import datetime
 
 def parse_igc_b_record(line):
     if len(line) < 35 or line[0] != 'B':
@@ -8,11 +9,11 @@ def parse_igc_b_record(line):
         lat_deg, lat_min = float(line[7:9]), float(line[9:14]) / 1000.0
         lat = lat_deg + (lat_min / 60.0)
         if line[14] == 'S': lat = -lat
-            
+
         lon_deg, lon_min = float(line[15:18]), float(line[18:23]) / 1000.0
         lon = lon_deg + (lon_min / 60.0)
         if line[23] == 'W': lon = -lon
-            
+
         alt_gps = int(line[30:35]) if len(line) >= 35 else 0
         return lat, lon, alt_gps, time_str
     except ValueError:
@@ -23,7 +24,7 @@ def haversine_distance_meters(lat1, lon1, lat2, lon2):
     phi1, phi2 = np.radians(lat1), np.radians(lat2)
     dphi = np.radians(lat2 - lat1)
     dlambda = np.radians(lon2 - lon1)
-    
+
     a = np.sin(dphi / 2.0)**2 + np.cos(phi1) * np.cos(phi2) * np.sin(dlambda / 2.0)**2
     return R * (2 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a)))
 
@@ -50,7 +51,7 @@ def fit_circle(points):
     radius = float(np.sqrt(radius_squared))
     radial_distances = np.hypot(x - center_x, y - center_y)
     errors = np.abs(radial_distances - radius)
-    angles = np.unwrap(np.arctan2(y - center_y, x - center_x))
+    angles = np.unwrap(np.arctan2(y - center_y, x - center_y))
     return {
         'center_x': float(center_x),
         'center_y': float(center_y),
@@ -63,7 +64,7 @@ def fit_circle(points):
 
 def find_circular_segment(
     X, Y, lats, lons, times, max_circle_deviation_m=5.0,
-    min_circle_angle_deg=90.0, max_circle_radius_m=5000.0
+    min_circle_angle_deg=330.0, max_circle_radius_m=5000.0
 ):
     """Find the longest track window that stays close to a fitted circle."""
     n = len(X)
@@ -132,14 +133,14 @@ def find_circular_segment(
         'circular_segment_coords': []
     }
 
-def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=5.0):
+def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=50.0, min_circle_angle_deg=180.0):
     coords = []
     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
             parsed = parse_igc_b_record(line.strip())
             if parsed:
                 coords.append(parsed)
-                
+
     if not coords:
         return None
 
@@ -154,7 +155,9 @@ def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=5.0)
 
     # Local Tangential Projection to meters (XY plane)
     R = 6371000.0
-    lat0_rad, lon0_rad = np.radians(np.mean(lats)), np.radians(np.mean(lons))
+    mean_lat = np.mean(lats)
+    mean_lon = np.mean(lons)
+    lat0_rad, lon0_rad = np.radians(mean_lat), np.radians(mean_lon)
     X = R * (np.radians(lons) - lon0_rad) * np.cos(lat0_rad)
     Y = R * (np.radians(lats) - lat0_rad)
 
@@ -167,11 +170,15 @@ def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=5.0)
         'max_dev_m': 0,
         'rms_dev_m': 0,
         'full_track_coords': list(zip(lats, lons)),
+        'full_track_times': times,
+        'origin_lat': mean_lat,
+        'origin_lon': mean_lon,
         'straight_segment_coords': []
     }
 
+    # Pass through the parameters from analyze_igc_track to find_circular_segment
     best.update(find_circular_segment(
-        X, Y, lats, lons, times, max_circle_deviation_m=max_circle_deviation_m))
+        X, Y, lats, lons, times, max_circle_deviation_m=max_circle_deviation_m, min_circle_angle_deg=min_circle_angle_deg))
 
     # Sliding window evaluation
     for start in range(n):
@@ -180,14 +187,14 @@ def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=5.0)
             p2 = np.array([X[end], Y[end]])
             vec = p2 - p1
             seg_len = np.linalg.norm(vec)
-            
+
             if seg_len == 0:
                 continue
-                
+
             pts = np.column_stack((X[start:end+1], Y[start:end+1])) - p1
             proj = np.outer(np.dot(pts, vec) / (seg_len**2), vec)
             devs = np.linalg.norm(pts - proj, axis=1)
-            
+
             max_d = devs.max()
             if max_d <= max_dev_meters:
                 if seg_len > best['straight_displacement_m']:
