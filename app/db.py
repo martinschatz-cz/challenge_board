@@ -21,6 +21,8 @@ def init_db():
                 max_dev_m REAL,
                 closeness_pct REAL,
                 circle_radius_m REAL,
+                altitude_gain_m REAL,
+                altitude_loss_rate_mps REAL,
                 upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -40,22 +42,29 @@ def init_db():
             conn.execute("ALTER TABLE leaderboard ADD COLUMN closeness_pct REAL")
         if "circle_radius_m" not in existing_columns:
             conn.execute("ALTER TABLE leaderboard ADD COLUMN circle_radius_m REAL")
+        if "altitude_gain_m" not in existing_columns:
+            conn.execute("ALTER TABLE leaderboard ADD COLUMN altitude_gain_m REAL")
+        if "altitude_loss_rate_mps" not in existing_columns:
+            conn.execute("ALTER TABLE leaderboard ADD COLUMN altitude_loss_rate_mps REAL")
             
         conn.commit()
 
 def save_submission(
     pilot_name, straight_m, total_km, max_dev, start_t, end_t,
-    challenge_type="straight_track", closeness_pct=None, circle_radius_m=None
+    challenge_type="straight_track", closeness_pct=None, circle_radius_m=None,
+    altitude_gain_m=None, altitude_loss_rate_mps=None
 ):
     init_db()
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO leaderboard 
             (pilot_name, challenge_type, straight_len_m, total_len_km, max_dev_m,
-                 closeness_pct, circle_radius_m, start_time, end_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 closeness_pct, circle_radius_m, altitude_gain_m,
+                 altitude_loss_rate_mps, start_time, end_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (pilot_name, challenge_type, straight_m, total_km, max_dev,
-                    closeness_pct, circle_radius_m, start_t, end_t))
+                    closeness_pct, circle_radius_m, altitude_gain_m,
+                    altitude_loss_rate_mps, start_t, end_t))
         conn.commit()
 
 def get_top_results(challenge_type="straight_track", limit=7):
@@ -70,12 +79,23 @@ def get_top_results(challenge_type="straight_track", limit=7):
                 max_dev_m AS 'Max Dev (m)',
                 closeness_pct AS 'Closeness (%)',
                 circle_radius_m AS 'Circle Radius (m)',
+                altitude_gain_m AS 'Altitude Gain (m)',
+                altitude_loss_rate_mps AS 'Altitude Loss Rate (m/s)',
                 start_time AS 'Start UTC',
                 end_time AS 'End UTC',
                 upload_date AS 'Uploaded'
             FROM leaderboard 
             WHERE challenge_type = ?
-            ORDER BY straight_len_m DESC
+            ORDER BY CASE
+                WHEN challenge_type = 'circle_track' THEN closeness_pct
+                WHEN challenge_type = 'altitude_gain' THEN altitude_gain_m
+                WHEN challenge_type = 'altitude_loss' THEN altitude_loss_rate_mps
+                ELSE straight_len_m
+            END DESC,
+            CASE
+                WHEN challenge_type = 'circle_track' THEN straight_len_m
+                ELSE 0
+            END DESC
             LIMIT ?
         """, (challenge_type, limit))
         columns = [col[0] for col in cursor.description]

@@ -14,12 +14,16 @@ This is useful for soaring and competition-style challenges where the goal is no
 
 - Upload IGC files through a Streamlit interface
 - Parse GPS position records from the IGC format
-- Calculate total flight distance, the longest straight segment, and the longest circular segment
+- Calculate total flight distance, the longest straight segment, the closest circular segment, maximum altitude gain, and fastest altitude loss
 - Accept a “maximum deviation tolerance” to control how strict the straightness check is
 - Save leaderboard results to SQLite
 - Display the ranking in a table
 - Visualize the full route and the detected straight segment on a map
 - Estimate circular-track quality using radial error and a closeness percentage
+- Track maximum altitude gain in meters within continuous recording runs
+- Track the fastest altitude loss in meters per second over an exact 3-second window
+
+Altitude challenges use the IGC pressure-altitude field, which is more stable for vertical-rate calculations than GPS altitude. GPS altitude is used only as a fallback when pressure altitude is unavailable.
 
 ## How it works
 
@@ -47,6 +51,10 @@ Circular detection fits a circle to sliding windows of the projected track. A wi
 The app stores each submission in a SQLite database and orders the results by straight-line length in descending order.
 
 Circular detections are stored as a separate `circle_track` challenge and ranked by circular arc length.
+
+Altitude detections are stored as a separate `altitude_gain` challenge and ranked by meters gained. A recording gap over 10 seconds starts a new continuous run.
+
+Fastest altitude-loss detections are stored as a separate `altitude_loss` challenge and ranked by meters per second lost over 3 seconds. Circle results are ranked by closeness percentage, with arc length used as a tie-breaker.
 
 ### 5. Visualization
 The latest uploaded flight is shown on a Folium map:

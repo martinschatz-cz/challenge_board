@@ -15,7 +15,6 @@ with st.form("upload_form"):
     
     max_dev = st.slider("Straight-line deviation tolerance (m)", 2, 15, 5)
     max_circle_dev = st.slider("Circle radial error tolerance (m)", 2, 50, 5)
-    min_circle_angle = st.slider("Minimum circle angle (degrees)", 90, 360, 180)
     
     submitted = st.form_submit_button("Submit Track", type="primary")
 
@@ -34,7 +33,7 @@ if submitted:
                 temp_path,
                 max_dev_meters=max_dev,
                 max_circle_deviation_m=max_circle_dev,
-                min_circle_angle_deg=min_circle_angle
+                min_circle_angle_deg=180
             )
 
         if result:
@@ -61,6 +60,30 @@ if submitted:
                     circle_radius_m=result['circle_radius_m']
                 )
 
+            if result['altitude_gain_m'] > 0:
+                save_submission(
+                    pilot_name=pilot_name,
+                    straight_m=0,
+                    total_km=result['total_track_length_km'],
+                    max_dev=0,
+                    start_t=result['altitude_start_time'],
+                    end_t=result['altitude_end_time'],
+                    challenge_type="altitude_gain",
+                    altitude_gain_m=result['altitude_gain_m']
+                )
+
+            if result['altitude_loss_rate_mps'] > 0:
+                save_submission(
+                    pilot_name=pilot_name,
+                    straight_m=0,
+                    total_km=result['total_track_length_km'],
+                    max_dev=0,
+                    start_t=result['altitude_loss_start_time'],
+                    end_t=result['altitude_loss_end_time'],
+                    challenge_type="altitude_loss",
+                    altitude_loss_rate_mps=result['altitude_loss_rate_mps']
+                )
+
             st.balloons()
             st.success(
                 f"Track processed! Longest straight segment: **{result['straight_displacement_m']} meters**"
@@ -76,6 +99,18 @@ if submitted:
                 st.warning(
                     "No qualifying circular segment was found, so this upload was not added "
                     "to the circle leaderboard. Try a lower radial error tolerance or minimum angle."
+                )
+
+            if result['altitude_gain_m'] > 0:
+                st.info(
+                    f"Maximum continuous altitude gain: **{result['altitude_gain_m']} m** "
+                    f"in {result['altitude_duration_s']} seconds."
+                )
+            if result['altitude_loss_rate_mps'] > 0:
+                st.info(
+                    f"Fastest altitude loss: **{result['altitude_loss_rate_mps']} m/s** "
+                    f"over {result['altitude_loss_duration_s']} seconds "
+                    f"({result['altitude_loss_m']} m)."
                 )
             
             # Show Map preview
