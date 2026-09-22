@@ -1,7 +1,8 @@
 import sqlite3
 import os
 
-DATA_DIR = "data"
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(PROJECT_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "leaderboard.db")
 
@@ -18,6 +19,8 @@ def init_db():
                 straight_len_m REAL,
                 total_len_km REAL,
                 max_dev_m REAL,
+                closeness_pct REAL,
+                circle_radius_m REAL,
                 upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -33,19 +36,30 @@ def init_db():
             conn.execute("ALTER TABLE leaderboard ADD COLUMN start_time TEXT")
         if "end_time" not in existing_columns:
             conn.execute("ALTER TABLE leaderboard ADD COLUMN end_time TEXT")
+        if "closeness_pct" not in existing_columns:
+            conn.execute("ALTER TABLE leaderboard ADD COLUMN closeness_pct REAL")
+        if "circle_radius_m" not in existing_columns:
+            conn.execute("ALTER TABLE leaderboard ADD COLUMN circle_radius_m REAL")
             
         conn.commit()
 
-def save_submission(pilot_name, straight_m, total_km, max_dev, start_t, end_t, challenge_type="straight_track"):
+def save_submission(
+    pilot_name, straight_m, total_km, max_dev, start_t, end_t,
+    challenge_type="straight_track", closeness_pct=None, circle_radius_m=None
+):
+    init_db()
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO leaderboard 
-            (pilot_name, challenge_type, straight_len_m, total_len_km, max_dev_m, start_time, end_time)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (pilot_name, challenge_type, straight_m, total_km, max_dev, start_t, end_t))
+            (pilot_name, challenge_type, straight_len_m, total_len_km, max_dev_m,
+                 closeness_pct, circle_radius_m, start_time, end_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (pilot_name, challenge_type, straight_m, total_km, max_dev,
+                    closeness_pct, circle_radius_m, start_t, end_t))
         conn.commit()
 
 def get_top_results(challenge_type="straight_track", limit=7):
+    init_db()
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -54,6 +68,8 @@ def get_top_results(challenge_type="straight_track", limit=7):
                 straight_len_m AS 'Straight Line (m)', 
                 total_len_km AS 'Total Flight (km)', 
                 max_dev_m AS 'Max Dev (m)',
+                closeness_pct AS 'Closeness (%)',
+                circle_radius_m AS 'Circle Radius (m)',
                 start_time AS 'Start UTC',
                 end_time AS 'End UTC',
                 upload_date AS 'Uploaded'

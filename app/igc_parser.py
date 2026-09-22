@@ -50,16 +50,21 @@ def fit_circle(points):
     radius = float(np.sqrt(radius_squared))
     radial_distances = np.hypot(x - center_x, y - center_y)
     errors = np.abs(radial_distances - radius)
+    angles = np.unwrap(np.arctan2(y - center_y, x - center_x))
     return {
         'center_x': float(center_x),
         'center_y': float(center_y),
         'radius_m': radius,
         'max_error_m': float(errors.max()),
-        'rms_error_m': float(np.sqrt(np.mean(errors**2)))
+        'rms_error_m': float(np.sqrt(np.mean(errors**2))),
+        'angular_span_deg': float(np.degrees(np.max(angles) - np.min(angles)))
     }
 
 
-def find_circular_segment(X, Y, lats, lons, times, max_circle_deviation_m=20.0):
+def find_circular_segment(
+    X, Y, lats, lons, times, max_circle_deviation_m=5.0,
+    min_circle_angle_deg=90.0, max_circle_radius_m=5000.0
+):
     """Find the longest track window that stays close to a fitted circle."""
     n = len(X)
     if n < 8:
@@ -69,6 +74,7 @@ def find_circular_segment(X, Y, lats, lons, times, max_circle_deviation_m=20.0):
             'circle_center': None,
             'circle_max_error_m': 0,
             'circle_rms_error_m': 0,
+            'circle_angular_span_deg': 0,
             'circle_closeness_pct': 0,
             'circle_start_time': '',
             'circle_end_time': '',
@@ -87,7 +93,13 @@ def find_circular_segment(X, Y, lats, lons, times, max_circle_deviation_m=20.0):
         for end_pos in range(start_pos + 7, len(search_indices), 3):
             end = search_indices[end_pos]
             fit = fit_circle(np.column_stack((X[start:end + 1], Y[start:end + 1])))
-            if fit is None or fit['max_error_m'] > max_circle_deviation_m:
+            if fit is None:
+                continue
+            if fit['max_error_m'] > max_circle_deviation_m:
+                continue
+            if fit['radius_m'] > max_circle_radius_m:
+                continue
+            if fit['angular_span_deg'] < min_circle_angle_deg:
                 continue
 
             arc_length = float(np.sum(haversine_distance_meters(
@@ -100,6 +112,7 @@ def find_circular_segment(X, Y, lats, lons, times, max_circle_deviation_m=20.0):
                     'circle_center': (round(fit['center_y'], 2), round(fit['center_x'], 2)),
                     'circle_max_error_m': round(fit['max_error_m'], 2),
                     'circle_rms_error_m': round(fit['rms_error_m'], 2),
+                    'circle_angular_span_deg': round(fit['angular_span_deg'], 2),
                     'circle_closeness_pct': round(closeness, 2),
                     'circle_start_time': times[start],
                     'circle_end_time': times[end],
@@ -112,13 +125,14 @@ def find_circular_segment(X, Y, lats, lons, times, max_circle_deviation_m=20.0):
         'circle_center': None,
         'circle_max_error_m': 0,
         'circle_rms_error_m': 0,
+        'circle_angular_span_deg': 0,
         'circle_closeness_pct': 0,
         'circle_start_time': '',
         'circle_end_time': '',
         'circular_segment_coords': []
     }
 
-def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=20.0):
+def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=5.0):
     coords = []
     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:

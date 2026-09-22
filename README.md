@@ -14,11 +14,12 @@ This is useful for soaring and competition-style challenges where the goal is no
 
 - Upload IGC files through a Streamlit interface
 - Parse GPS position records from the IGC format
-- Calculate total flight distance and the longest straight segment
+- Calculate total flight distance, the longest straight segment, and the longest circular segment
 - Accept a “maximum deviation tolerance” to control how strict the straightness check is
 - Save leaderboard results to SQLite
 - Display the ranking in a table
 - Visualize the full route and the detected straight segment on a map
+- Estimate circular-track quality using radial error and a closeness percentage
 
 ## How it works
 
@@ -40,14 +41,19 @@ The analysis then projects the flight into a local planar coordinate system and 
 
 If the maximum deviation stays below the configured tolerance, the segment is treated as a valid straight track. The longest such segment becomes the winner for that flight.
 
+Circular detection fits a circle to sliding windows of the projected track. A window is accepted when its maximum radial error is below the selected tolerance. The result reports the fitted radius, maximum and RMS radial error, and a closeness percentage based on RMS error relative to the radius.
+
 ### 4. Leaderboard
 The app stores each submission in a SQLite database and orders the results by straight-line length in descending order.
+
+Circular detections are stored as a separate `circle_track` challenge and ranked by circular arc length.
 
 ### 5. Visualization
 The latest uploaded flight is shown on a Folium map:
 
 - blue line for the whole track
 - red line for the longest straight segment
+- green line for the longest circular segment
 - green and red markers for the segment start and end
 
 ## Project structure

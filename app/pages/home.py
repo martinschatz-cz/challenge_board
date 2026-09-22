@@ -20,46 +20,57 @@ with col3:
 
 st.markdown("---")
 
-# Leaderboard Section
-st.subheader("🏆 Top 7 Leaderboard - Longest Straight Track")
+# Separate leaderboard for each challenge
+straight_tab, circle_tab = st.tabs([
+    "📏 Longest Straight Track",
+    "⭕ Perfect Circle"
+])
 
-top_7 = get_top_results(challenge_type="straight_track", limit=7)
+with straight_tab:
+    st.subheader("🏆 Longest Straight Track")
+    straight_results = get_top_results(challenge_type="straight_track", limit=7)
 
-if top_7:
-    df = pd.DataFrame(top_7)
-    
-    # Highlight top 3 podium
-    def highlight_top3(row):
-        if row.name == 0:
-            return ['background-color: #ffeaa7; font-weight: bold'] * len(row) # 🥇 Gold
-        elif row.name == 1:
-            return ['background-color: #dfe6e9'] * len(row) # 🥈 Silver
-        elif row.name == 2:
-            return ['background-color: #fab1a0'] * len(row) # 🥉 Bronze
-        return [''] * len(row)
+    if straight_results:
+        straight_df = pd.DataFrame(straight_results)[[
+            "Pilot", "Straight Line (m)", "Total Flight (km)",
+            "Max Dev (m)", "Start UTC", "End UTC", "Uploaded"
+        ]]
 
-    st.dataframe(
-        df.style.apply(highlight_top3, axis=1),
-        use_container_width=True,
-        hide_index=False
-    )
-else:
-    st.warning("No entries yet! Be the first to submit a track.")
+        def highlight_top3(row):
+            if row.name == 0:
+                return ['background-color: #ffeaa7; font-weight: bold'] * len(row)
+            if row.name == 1:
+                return ['background-color: #dfe6e9'] * len(row)
+            if row.name == 2:
+                return ['background-color: #fab1a0'] * len(row)
+            return [''] * len(row)
 
-st.subheader("⭕ Top 7 Leaderboard - Closest Circular Track")
-circle_results = get_top_results(challenge_type="circle_track", limit=7)
+        st.dataframe(
+            straight_df.style.apply(highlight_top3, axis=1),
+            use_container_width=True,
+            hide_index=False
+        )
+    else:
+        st.warning("No straight-track entries yet. Be the first to submit a track.")
 
-if circle_results:
-    st.dataframe(
-        pd.DataFrame(circle_results).rename(columns={
+with circle_tab:
+    st.subheader("🏆 Closest Circular Track")
+    circle_results = get_top_results(challenge_type="circle_track", limit=7)
+
+    if circle_results:
+        circle_df = pd.DataFrame(circle_results).rename(columns={
             "Straight Line (m)": "Circular Arc (m)",
-            "Max Dev (m)": "Max Radial Error (m)"
-        }),
-        use_container_width=True,
-        hide_index=False
-    )
-else:
-    st.info("No circular track entries yet. Upload a flight to detect one.")
+            "Max Dev (m)": "Max Radial Error (m)",
+            "Closeness (%)": "Circle Closeness (%)",
+            "Circle Radius (m)": "Radius (m)"
+        })[[
+            "Pilot", "Circular Arc (m)", "Radius (m)",
+            "Circle Closeness (%)", "Max Radial Error (m)",
+            "Start UTC", "End UTC", "Uploaded"
+        ]]
+        st.dataframe(circle_df, use_container_width=True, hide_index=False)
+    else:
+        st.info("No circular-track entries yet. Upload a flight to detect one.")
 
 st.markdown("### Ready to compete?")
 if st.button("📤 Upload Your Track Now", type="primary"):
