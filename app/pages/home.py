@@ -7,7 +7,7 @@ st.caption("Welcome to the IGC leaderboard platform. Upload your track logs and 
 
 # Active & Upcoming Challenges Grid
 st.subheader("🎯 Active Challenges")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.info("**📏 Longest Straight Track**\n\nFind the longest straight gliding line within deviation tolerances.")
@@ -15,20 +15,13 @@ with col1:
 with col2:
     st.info("**⬆️ Maximum Altitude Gain**\n\nFind the largest continuous altitude gain with no recording gap over 10 seconds.")
 
-with col2:
-    st.info("**⬆️ Maximum Altitude Gain**\n\nFind the largest continuous altitude gain with no recording gap over 10 seconds.")
-
 with col3:
-    st.info("**⭕ Perfect Circle**\n\nFind the longest part of a flight that follows a circular path.")
-
-with col4:
     st.info("**⬇️ Fastest Altitude Loss**\n\nFind the fastest descent measured over 3 seconds.")
 st.markdown("---")
 
 # Separate leaderboard for each challenge
-straight_tab, circle_tab, altitude_tab, loss_tab = st.tabs([
+straight_tab, altitude_tab, loss_tab = st.tabs([
     "📏 Longest Straight Track",
-    "⭕ Perfect Circle",
     "⬆️ Altitude Gain",
     "⬇️ Altitude Loss"
 ])
@@ -60,29 +53,6 @@ with straight_tab:
         )
     else:
         st.warning("No straight-track entries yet. Be the first to submit a track.")
-
-with circle_tab:
-    st.subheader("🏆 Closest Circular Track")
-    circle_results = get_top_results(challenge_type="circle_track", limit=7)
-
-    if circle_results:
-        circle_df = pd.DataFrame(circle_results).rename(columns={
-            "Straight Line (m)": "Circular Arc (m)",
-            "Max Dev (m)": "Max Radial Error (m)",
-            "Closeness (%)": "Circle Closeness (%)",
-            "Circle Radius (m)": "Radius (m)"
-        })[[
-            "Pilot", "Circular Arc (m)", "Radius (m)",
-            "Circle Closeness (%)", "Max Radial Error (m)",
-            "Start UTC", "End UTC", "Uploaded"
-        ]]
-        st.dataframe(
-            circle_df.style.apply(highlight_top3, axis=1),
-            use_container_width=True,
-            hide_index=False
-        )
-    else:
-        st.info("No circular-track entries yet. Upload a flight to detect one.")
 
 with altitude_tab:
     st.subheader("🏆 Maximum Continuous Altitude Gain")
