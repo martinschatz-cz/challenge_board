@@ -10,6 +10,7 @@ RUN pixi install
 
 # Copy source code and data target directory
 COPY app /app/app
+COPY .streamlit /app/.streamlit
 RUN mkdir -p /app/data
 
 EXPOSE 8501
