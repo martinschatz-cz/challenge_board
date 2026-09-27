@@ -14,7 +14,6 @@ with st.form("upload_form"):
     igc_file = st.file_uploader("Upload IGC Track (Max 50 MB)", type=["igc"])
     
     max_dev = st.slider("Straight-line deviation tolerance (m)", 2, 15, 5)
-    max_circle_dev = st.slider("Circle radial error tolerance (m)", 2, 50, 5)
     
     submitted = st.form_submit_button("Submit Track", type="primary")
 
@@ -31,9 +30,7 @@ if submitted:
         with st.spinner("Processing track geometry..."):
             result = analyze_igc_track(
                 temp_path,
-                max_dev_meters=max_dev,
-                max_circle_deviation_m=max_circle_dev,
-                min_circle_angle_deg=180
+                max_dev_meters=max_dev
             )
 
         if result:
@@ -46,19 +43,6 @@ if submitted:
                 end_t=result['end_time'],
                 challenge_type="straight_track"
             )
-
-            if result['circular_arc_length_m'] > 0:
-                save_submission(
-                    pilot_name=pilot_name,
-                    straight_m=result['circular_arc_length_m'],
-                    total_km=result['total_track_length_km'],
-                    max_dev=result['circle_max_error_m'],
-                    start_t=result['circle_start_time'],
-                    end_t=result['circle_end_time'],
-                    challenge_type="circle_track",
-                    closeness_pct=result['circle_closeness_pct'],
-                    circle_radius_m=result['circle_radius_m']
-                )
 
             if result['altitude_gain_m'] > 0:
                 save_submission(
@@ -90,19 +74,6 @@ if submitted:
             st.success(
                 f"Track processed! Longest straight segment: **{result['straight_displacement_m']} meters**"
             )
-            if result['circular_arc_length_m'] > 0:
-                st.info(
-                    f"Longest circular segment: **{result['circular_arc_length_m']} meters** "
-                    f"with **{result['circle_closeness_pct']}%** closeness "
-                    f"(radius {result['circle_radius_m']} m, "
-                    f"angular span {result['circle_angular_span_deg']}°)."
-                )
-            else:
-                st.warning(
-                    "No qualifying circular segment was found, so this upload was not added "
-                    "to the circle leaderboard. Try a lower radial error tolerance or minimum angle."
-                )
-
             if result['altitude_gain_m'] > 0:
                 st.info(
                     f"Maximum continuous altitude gain: **{result['altitude_gain_m']} m** "
