@@ -156,9 +156,6 @@ def analyze_igc_track(file_path, max_dev_meters=3.0, max_circle_deviation_m=20.0
         'straight_segment_coords': []
     }
 
-    best.update(find_circular_segment(
-        X, Y, lats, lons, times, max_circle_deviation_m=max_circle_deviation_m))
-
     # Sliding window evaluation
     for start in range(n):
         for end in range(start + 5, n):

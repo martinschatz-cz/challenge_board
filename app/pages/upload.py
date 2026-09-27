@@ -14,7 +14,6 @@ with st.form("upload_form"):
     igc_file = st.file_uploader("Upload IGC Track (Max 50 MB)", type=["igc"])
     
     max_dev = st.slider("Straight-line deviation tolerance (m)", 2, 15, 5)
-    max_circle_dev = st.slider("Circle radial error tolerance (m)", 5, 100, 20)
     
     submitted = st.form_submit_button("Submit Track", type="primary")
 
@@ -31,8 +30,7 @@ if submitted:
         with st.spinner("Processing track geometry..."):
             result = analyze_igc_track(
                 temp_path,
-                max_dev_meters=max_dev,
-                max_circle_deviation_m=max_circle_dev
+                max_dev_meters=max_dev
             )
 
         if result:
@@ -46,40 +44,20 @@ if submitted:
                 challenge_type="straight_track"
             )
 
-            if result['circular_arc_length_m'] > 0:
-                save_submission(
-                    pilot_name=pilot_name,
-                    straight_m=result['circular_arc_length_m'],
-                    total_km=result['total_track_length_km'],
-                    max_dev=result['circle_max_error_m'],
-                    start_t=result['circle_start_time'],
-                    end_t=result['circle_end_time'],
-                    challenge_type="circle_track"
-                )
-
             st.balloons()
             st.success(
                 f"Track processed! Longest straight segment: **{result['straight_displacement_m']} meters**"
             )
-            if result['circular_arc_length_m'] > 0:
-                st.info(
-                    f"Longest circular segment: **{result['circular_arc_length_m']} meters** "
-                    f"with **{result['circle_closeness_pct']}%** closeness "
-                    f"(radius {result['circle_radius_m']} m)."
-                )
             
             # Show Map preview
             full_coords = result['full_track_coords']
             straight_coords = result['straight_segment_coords']
-            circle_coords = result['circular_segment_coords']
             
             if full_coords:
                 m = folium.Map(location=full_coords[0], zoom_start=12)
                 folium.PolyLine(full_coords, color="blue", weight=2, opacity=0.5, popup="Full Flight").add_to(m)
                 if straight_coords:
                     folium.PolyLine(straight_coords, color="red", weight=5, opacity=0.9, popup="Straight Segment").add_to(m)
-                if circle_coords:
-                    folium.PolyLine(circle_coords, color="green", weight=5, opacity=0.9, popup="Circular Segment").add_to(m)
                 st_folium(m, width=1000, height=400)
                 
             if st.button("🏆 View Leaderboard"):

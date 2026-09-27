@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   igc-competition:
     build: .
@@ -7,4 +5,12 @@ services:
       - "8501:8501"
     volumes:
       - ./data:/app/data
+    restart: unless-stopped
+
+  newt:
+    image: fosrl/newt:latest
+    environment:
+      PANGOLIN_ENDPOINT: ${PANGOLIN_ENDPOINT:?Set PANGOLIN_ENDPOINT in .env}
+      NEWT_ID: ${NEWT_ID:?Set NEWT_ID in .env}
+      NEWT_SECRET: ${NEWT_SECRET:?Set NEWT_SECRET in .env}
     restart: unless-stopped

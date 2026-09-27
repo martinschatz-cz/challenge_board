@@ -83,13 +83,23 @@ http://localhost:8501
 
 ## Docker run
 
-You can also run the app with Docker:
+Create `.env` from the example and fill in the endpoint and credentials generated when you add a Newt client in Pangolin:
+
+```bash
+cp .env.example .env
+```
+
+Compose passes these values to Newt and refuses to start if any are missing. Keep `.env` private; it is excluded from Git.
+
+In Pangolin, configure the app resource to reach `igc-competition` on port `8501`. The Newt and app services share the Compose network, so this works without exposing another host port.
+
+Start both services:
 
 ```bash
 docker compose up --build
 ```
 
-The app will be exposed on port 8501.
+The app remains available directly on port 8501 as well as through Pangolin.
 
 ## Notes
 
